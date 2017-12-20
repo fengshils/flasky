@@ -2,3 +2,4 @@ __pycache__
 venv
 config.py 
 *.pyc
+data-dev.sqlite

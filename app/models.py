@@ -3,8 +3,10 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from . import login_manager
 from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
-from flask import current_app
+from flask import current_app, request
 from datetime import datetime
+import hashlib 
+
 
 
 #使用8进制表示，次数使用五位，预留三位
@@ -96,6 +98,7 @@ class User(UserMixin, db.Model):
     about_me = db.Column(db.Text())                                         #自我介绍
     member_since = db.Column(db.DateTime(), default=datetime.utcnow)        #注册日期
     last_seen = db.Column(db.DateTime(), default=datetime.utcnow)           #最后访问日期
+    
 
     #User 类的构造函数首先调用基类的构造函数，如果创建基类对象后还没定义角色，则根据电子邮件地址决定将其设为管理员还是默认角色
     def __init__(self, **kwargs): 
@@ -137,7 +140,7 @@ class User(UserMixin, db.Model):
     def ping(self): 
         self.last_seen = datetime.utcnow() 
         db.session.add(self)
-
+    
     def __repr__(self): 
         return '<User %r>' % self.username
     
@@ -147,7 +150,35 @@ class User(UserMixin, db.Model):
  
     def is_administrator(self): 
         return self.can(Permission.ADMINISTER) 
+
+    avatar_hash = db.Column(db.String(32)) 
  
+    def __init__(self, **kwargs): 
+        # ... 
+        if self.email is not None and self.avatar_hash is None: 
+            self.avatar_hash = hashlib.md5( 
+                self.email.encode('utf-8')).hexdigest() 
+ 
+    def change_email(self, token): 
+        # ... 
+        self.email = new_email 
+        self.avatar_hash = hashlib.md5( 
+            self.email.encode('utf-8')).hexdigest() 
+        db.session.add(self) 
+        return True 
+ 
+    def gravatar(self, size=100, default='identicon', rating='g'): 
+        if request.is_secure: 
+            url = 'https://secure.gravatar.com/avatar' 
+        else: 
+            url = 'http://www.gravatar.com/avatar' 
+        hash = self.avatar_hash or hashlib.md5( 
+            self.email.encode('utf-8')).hexdigest() 
+        return '{url}/{hash}?s={size}&d={default}&r={rating}'.format( 
+            url=url, hash=hash, size=size, default=default, rating=rating)
+
+
+
 class AnonymousUser(AnonymousUserMixin): 
     def can(self, permissions): 
         return False 
