@@ -4,6 +4,7 @@ from . import login_manager
 from flask_login import UserMixin, AnonymousUserMixin
 from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app
+from datetime import datetime
 
 
 #使用8进制表示，次数使用五位，预留三位
@@ -90,6 +91,11 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(128))
     confirmed = db.Column(db.Boolean, default=False)
     role_id = db.Column(db.Integer, db.ForeignKey('roles.id'))
+    name = db.Column(db.String(64))                                         #真实姓名
+    location = db.Column(db.String(64))                                     #所在地
+    about_me = db.Column(db.Text())                                         #自我介绍
+    member_since = db.Column(db.DateTime(), default=datetime.utcnow)        #注册日期
+    last_seen = db.Column(db.DateTime(), default=datetime.utcnow)           #最后访问日期
 
     #User 类的构造函数首先调用基类的构造函数，如果创建基类对象后还没定义角色，则根据电子邮件地址决定将其设为管理员还是默认角色
     def __init__(self, **kwargs): 
@@ -127,6 +133,11 @@ class User(UserMixin, db.Model):
         db.session.add(self)
         return True
     
+    #更新用户最后登录时间
+    def ping(self): 
+        self.last_seen = datetime.utcnow() 
+        db.session.add(self)
+
     def __repr__(self): 
         return '<User %r>' % self.username
     
