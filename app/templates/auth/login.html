@@ -13,9 +13,15 @@
     &nbsp;
     &nbsp;
     <p>
-        New user?
+        新用户?
         <a href="{{ url_for('auth.register') }}">
-            Click here to register
+            点击此处注册
+        </a>
+    </p>
+    <p>
+        忘记密码?
+        <a href="{{ url_for('auth.password_reset_request') }}">
+            点此重置密码
         </a>
     </p>
 </div>
