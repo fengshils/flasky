@@ -6,8 +6,8 @@ from itsdangerous import TimedJSONWebSignatureSerializer as Serializer
 from flask import current_app, request
 from datetime import datetime
 import hashlib 
-
-
+from markdown import markdown
+import bleach
 
 #使用8进制表示，次数使用五位，预留三位
 class Permission:
@@ -197,5 +197,22 @@ class Post(db.Model):
     __tablename__ = 'posts'
     id = db.Column(db.Integer, primary_key=True)
     body = db.Column(db.Text)
+    body_html = db.Column(db.Text)
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+    """on_changed_body 函数注册在 body 字段上，是 SQLAlchemy“set”事件的监听程序，这意
+    味着只要这个类实例的 body 字段设了新值，函数就会自动被调用。on_changed_body 函数
+    把 body 字段中的文本渲染成 HTML 格式，结果保存在 body_html 中，自动且高效地完成
+    Markdown 文本到 HTML 的转换
+    """
+    @staticmethod
+    def  on_changed_body(target, value, oldvalue, initiator):
+        allowed_tags = ['a', 'abbr', 'acronym', 'b', 'blockquote', 'code', 
+                        'em', 'i', 'li', 'ol', 'pre', 'strong', 'ul', 
+                        'h1', 'h2', 'h3', 'p'] 
+        target.body_html = bleach.linkify(bleach.clean( 
+            markdown(value, output_format='html'), 
+            tags=allowed_tags, strip=True)) 
+ 
+db.event.listen(Post.body, 'set', Post.on_changed_body)

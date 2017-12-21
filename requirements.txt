@@ -11,6 +11,9 @@ Flask-Migrate==2.1.1
 Flask-Moment==0.5.2
 Flask-Script==2.0.6
 Flask-SQLAlchemy==2.3.2
+flask-pagedown 
+markdown 
+bleach
 Flask-WTF==0.14.2
 Flask-Login==0.2.11
 isort==4.2.15
