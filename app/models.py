@@ -9,6 +9,15 @@ import hashlib
 from markdown import markdown
 import bleach
 
+
+
+class Follow(db.Model):
+    __tablename__ = 'follows'
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    followed_id = db.Column(db.Integer, db.ForeignKey('users.id'), primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 #使用8进制表示，次数使用五位，预留三位
 class Permission:
     """
@@ -99,6 +108,8 @@ class User(UserMixin, db.Model):
     member_since = db.Column(db.DateTime(), default=datetime.utcnow)        #注册日期
     last_seen = db.Column(db.DateTime(), default=datetime.utcnow)           #最后访问日期
     posts = db.relationship('Post', backref='author', lazy='dynamic')
+    followed = db.relationship('Follow', foreign_keys=[Follow.follower_id],backref=db.backref('follower', lazy='joined'), lazy='dynamic', cascade='all, delete-orphan')
+    followers = db.relationship('Follow',foreign_keys=[Follow.followed_id], backref=db.backref('followed', lazy='joined'),  lazy='dynamic',  cascade='all, delete-orphan')
 
     #User 类的构造函数首先调用基类的构造函数，如果创建基类对象后还没定义角色，则根据电子邮件地址决定将其设为管理员还是默认角色
     def __init__(self, **kwargs): 
@@ -177,7 +188,28 @@ class User(UserMixin, db.Model):
         return '{url}/{hash}?s={size}&d={default}&r={rating}'.format( 
             url=url, hash=hash, size=size, default=default, rating=rating)
 
+    def follow(self, user):
+        if not self.is_following(user):
+            f = Follow(follower=self, followed=user)
+            db.session.add(f)
+            db.session.commit()
+    
+    def unfollow(self, user):
+        f = self.followed.filter_by(followed_id=user.id).first()
+        if f:
+            db.session.delete(f)
 
+    def is_following(self,user):
+        return self.followed.filter_by(followed_id=user.id).first() is not None
+
+    def is_followed_by(self, user):
+        return self.followers.filter_by(follower_id=user.id).first() is not None
+
+    @property
+    def followed_posts(self):
+        return Post.query.join(Follow, Follow.followed_id == Post.author_id)\
+            .filter(Follow.follower_id == self.id)
+    
 
 class AnonymousUser(AnonymousUserMixin): 
     def can(self, permissions): 
@@ -216,3 +248,4 @@ class Post(db.Model):
             tags=allowed_tags, strip=True)) 
  
 db.event.listen(Post.body, 'set', Post.on_changed_body)
+
