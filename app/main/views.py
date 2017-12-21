@@ -4,14 +4,21 @@ from flask_login import current_user, login_required
 from app.decorators import admin_required
 
 from . import main 
-from .forms import EditProfileForm, EditProfileAdminForm 
+from .forms import EditProfileForm, EditProfileAdminForm, PostForm 
 from app import db 
-from ..models import User, Role 
+from ..models import User, Role, Post, Permission
  
 @main.route('/', methods=['GET', 'POST']) 
-def index(): 
-
-    return render_template('index.html') 
+def index():
+    form = PostForm()
+    if current_user.can(Permission.WRITE_ARTICLES) and form.validate_on_submit():
+        post = Post(body=form.body.data,
+                    author=current_user._get_current_object())
+        db.session.add(post)
+        db.session.commit()
+        return redirect(url_for('.index'))
+    posts = Post.query.order_by(Post.timestamp.desc()).all()
+    return render_template('index.html', form=form, posts=posts) 
 
 @main.route('/user/<username>/')
 @login_required

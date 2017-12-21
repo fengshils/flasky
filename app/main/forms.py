@@ -42,3 +42,8 @@ class EditProfileAdminForm(FlaskForm):
     def validate_username(self, field): 
         if field.data != self.user.username and  User.query.filter_by(username=field.data).first(): 
             raise ValidationError('Username already in use.')
+
+#博客文章表单
+class PostForm(FlaskForm):
+    body = TextAreaField("请输入你的文章", validators=[DataRequired()])
+    submit = SubmitField('提交')

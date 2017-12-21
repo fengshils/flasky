@@ -98,7 +98,7 @@ class User(UserMixin, db.Model):
     about_me = db.Column(db.Text())                                         #自我介绍
     member_since = db.Column(db.DateTime(), default=datetime.utcnow)        #注册日期
     last_seen = db.Column(db.DateTime(), default=datetime.utcnow)           #最后访问日期
-    
+    posts = db.relationship('Post', backref='author', lazy='dynamic')
 
     #User 类的构造函数首先调用基类的构造函数，如果创建基类对象后还没定义角色，则根据电子邮件地址决定将其设为管理员还是默认角色
     def __init__(self, **kwargs): 
@@ -191,3 +191,11 @@ login_manager.anonymous_user = AnonymousUser
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
+
+#文章模型
+class Post(db.Model):
+    __tablename__ = 'posts'
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Text)
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
